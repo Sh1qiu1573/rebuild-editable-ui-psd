@@ -1,0 +1,4 @@
+interface:
+  display_name: "Editable UI PSD v3.2"
+  short_description: "Whole-scene redraw with two human review gates"
+  default_prompt: "Use $rebuild-editable-ui-psd-v3-2 to rebuild this flattened UI with whole-scene regeneration, whole-component redraws, and two blocking human reviews."
