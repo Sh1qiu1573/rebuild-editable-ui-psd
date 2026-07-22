@@ -42,10 +42,10 @@ Use this schema:
 
 ## PSD assembly rule
 
-Place `front` above `back`. Preserve the cast shadow with the front object when it is intrinsic to that object's effect. When the shadow falls across several back layers, use a separate clipped/masked shadow layer placed above those receivers and below the casting object.
+Place `front` above `back`: within one sibling scope, assign `front` a higher explicit numeric `z` than `back`. Across groups, compare the first differing ancestors because groups are atomic. Preserve the cast shadow with the front object when it is intrinsic to that object's effect. When the shadow falls across several back layers, use a separate prefixed clipped/masked image layer placed above those receivers and below the casting object.
 
 Reconstruct both front and back objects as complete/amodal objects before stacking. Never cut the back shape to its visible fragment. For regular or custom-vector frames, extend hidden tangent and parallel edges geometrically; use GPT Image only for hidden irregular raster artwork. Preserve each button's own outer stroke, inner shadow/glow, bevel, texture, and drop shadow before evaluating the combined render.
 
 Run `scripts/audit_occlusion_graph.py layer-manifest.json occlusion-graph.json`. Every pair with overlapping bounds must have a directed relation or documented `unknown`, and verified edges must remain acyclic.
 
-Completion criterion: every actual overlap has either a verified directed relation or a documented `unknown`; the graph is acyclic; PSD z-order follows the verified graph.
+Completion criterion: every actual overlap has either a verified directed relation or a documented `unknown`; the graph is acyclic; every non-reference sibling has an explicit unique numeric `z`; PSD z-order follows the verified graph.

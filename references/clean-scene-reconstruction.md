@@ -2,7 +2,7 @@
 
 ## Contract
 
-V3.3 uses `full-scene-regeneration` by default. Generate one complete UI-free scene and use it as the entire scene smart object.
+V3.4 uses `full-scene-regeneration` by default. Generate one complete UI-free scene and use it as the entire scene smart object.
 
 Do not:
 
@@ -50,5 +50,5 @@ Before review 2, deterministic checks may confirm dimensions, file readability, 
 - **UI remains in the scene:** regenerate the whole scene.
 - **Candidate dimensions differ:** normalize the complete candidate once and record the transform; do not treat it as a local registration.
 - **Subject or environment is unacceptable:** regenerate the whole scene with better references.
-- **The user now requires original scene preservation:** stop and switch to a source-preserving workflow; do not introduce masked splicing into v3.3.
+- **The user now requires original scene preservation:** stop and switch to a source-preserving workflow; do not introduce masked splicing into v3.4.
 - **Review 2 rejects the scene:** replace it with another whole-scene candidate and repeat the complete review composite.

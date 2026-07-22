@@ -1,4 +1,4 @@
-# Hybrid PSD v3.3 implementation plan
+# Hybrid PSD v3.4 implementation plan
 
 ## Contents
 
@@ -26,6 +26,8 @@ The result is complete only when:
 - Every damaged, incomplete, or occluded raster object has been redrawn as a whole component and re-segmented; no original/generated fragment composite is used.
 - Every raster asset follows its silhouette and contains one semantic object instance.
 - Human review 1 has approved classification, object instances, masks, names, and z-order after correcting over-masking, under-masking, missing items, extra items, and class errors.
+- Every non-reference layer and group follows `psd-layer-structure.md`; every button is an independent top-level group containing its body and any decoration, icon, and text layers.
+- Every non-reference sibling has an explicit unique numeric `z`; backgrounds are lower than foreground interaction elements in the same scope.
 - Human review 2 has approved one full source-size composition containing the regenerated scene and all final components at final coordinates.
 - The final PSD is assembled only from the assets and manifest approved in review 2.
 - Every non-reference PSD layer and layer group is exported from the completed PSD to `png/<layer name>.png` on a transparent source-size canvas.
@@ -35,22 +37,29 @@ The result is complete only when:
 
 ## 2. Output structure
 
-Use this baseline hierarchy:
+Use this baseline hierarchy. It is shown in Photoshop panel order from top to bottom:
 
 ```text
+Btn_PrimaryAction
+  @PrimaryActionText
+  Icon_PrimaryAction [optional]
+  Img_PrimaryActionDecoration [optional]
+  Bg_PrimaryAction
+Popup_Dialog
+  @DialogText
+  Img_DialogArt
+  Bg_DialogFrame
+Panel_Header
+  @TitleText
+  Icon_Status
+  Bg_Header
+Bg_MainScene
+  Bg_CleanScene [embedded smart object]
 00_REFERENCE [hidden, optional]
   source_reference
-10_SCENE
-  clean_scene [embedded smart object]
-20_HEADER
-30_DIALOG
-40_STATUS
-50_CONTENT
-60_PRIMARY_ACTION
-70_FOOTNOTE
 ```
 
-Use numeric prefixes only for top-level groups. Use stable semantic names inside groups. Avoid names such as `Layer 1`.
+Do not prepend numeric ordering codes to Unity-facing names. Use explicit `z` for order and the semantic prefixes in `psd-layer-structure.md`. `00_REFERENCE` and its descendants are the only naming exception.
 
 ## 3. Phase 0 - intake and preflight
 
@@ -59,7 +68,7 @@ Actions:
 1. Copy inputs to the working directory without modifying originals.
 2. Record paths, hashes, dimensions, color mode, profile, output path, font availability, reference-asset reuse permission, and network-upload permission.
 3. Record the source screenshot as authority for identity, text, geometry, layout, and z-order.
-4. Record v3.3 scene policy: whole-scene regeneration and direct replacement are the default. Source-scene pixel preservation is not expected.
+4. Record v3.4 scene policy: whole-scene regeneration and direct replacement are the default. Source-scene pixel preservation is not expected.
 5. Run `scripts/check_environment.py`.
 6. Run `scripts/photoshop_bridge.py probe <work>/photoshop-probe --timeout 45` and confirm the native assembly route is available.
 7. Create `task-audit.json` from `skill-metadata.json`.
@@ -72,7 +81,7 @@ Inspect the source at original resolution. Divide the screen into semantic regio
 
 For every item record:
 
-- Stable ID, name, region, group, bounds, and proposed z-order.
+- Stable ID, prefix-compliant name, region, parent group, bounds, and explicit sibling-scoped numeric `z`.
 - Exact visible text and token/character boxes.
 - Proposed class: `scene`, `editable-text`, `editable-shape`, or `raster-object`.
 - Draft visible mask and draft complete/amodal mask when overlap exists.
@@ -102,7 +111,7 @@ Require the reviewer to check:
 - Objects that should be merged or split.
 - Over-masking and under-masking.
 - Neighbor contamination and missing holes/thin parts.
-- Incorrect names, groups, bounds, and z-order.
+- Incorrect prefixes, button membership, parent groups, bounds, or bottom-to-top z-order.
 - Incorrect text transcription or text-unit grouping.
 
 Apply every requested correction and regenerate the review package. Repeat until approval is recorded in `human-review.json` as `classification_and_masks: approved`.
@@ -128,7 +137,7 @@ Read `clean-scene-reconstruction.md`.
 5. Never restore source pixels, mask-patch UI regions, or combine multiple scene candidates.
 6. Record all candidates and the selected candidate in `clean-scene-job.json` and `gpt-image-log.json`.
 
-Scene-drift approval is implicit in selecting this v3.3 skill. Ask again only when the user separately requires original scene preservation.
+Scene-drift approval is implicit in selecting this v3.4 skill. Ask again only when the user separately requires original scene preservation.
 
 Completion criterion: one target-size, UI-free scene asset is selected for use as the entire scene.
 
@@ -172,7 +181,8 @@ Completion criterion: every raster object has one complete transparent asset and
 3. Use a custom vector path for crisp irregular contours.
 4. Use a whole-component raster smart object for painterly, distressed, damaged, or occluded frames that should be redrawn as one asset.
 5. Keep labels and icons separate from button bodies.
-6. Record button measurements and unknown properties.
+6. Create one independent top-level `Btn_`/`Button_` group per button, outside panels and popups. Keep its `Bg_`/`BG_` body, `Img_`/`Image_` decoration, `Icon_` artwork, and `@` label inside that group.
+7. Record button measurements and unknown properties.
 
 ### Overlap
 
@@ -214,13 +224,13 @@ Completion criterion: one human-approved full composition is frozen as the autho
 ## 10. Phase 7 - Photoshop assembly and handoff
 
 1. Create a source-size RGB/8 Photoshop document.
-2. Place the approved `clean_scene.png` as a full-canvas embedded smart object.
-3. Create top-level semantic groups.
+2. Place the approved `clean_scene.png` as a full-canvas embedded smart object named `Bg_CleanScene` inside `Bg_MainScene`.
+3. Create prefix-compliant semantic groups; do not use numeric ordering prefixes outside `00_REFERENCE`.
 4. Place every approved raster object independently using approved bounds.
 5. Create approved text and shapes from the manifest.
-6. Apply approved clipping, effects, and z-order.
+6. Apply approved clipping and effects. Assign every non-reference sibling an explicit unique numeric `z`, with backgrounds lower than foreground panels, popups, buttons, images, icons, and text.
 7. Mark the hidden `00_REFERENCE` group with `reference: true`; descendants inherit reference exclusion.
-8. Ensure every non-reference layer and layer-group name is a unique case-insensitive Windows-safe filename stem.
+8. Ensure every non-reference layer and layer-group name follows `psd-layer-structure.md` and is a unique case-insensitive Windows-safe filename stem. Ensure every button is an independent top-level group with a background body and only its own prefixed content.
 9. Set `output.layer_png_dir` to `png`, run the Photoshop assembly job, and save `final.psd` under a new name.
 10. Reopen the completed PSD through the bridge and export every non-reference layer and layer group to `png/<layer name>.png`. Preserve the full PSD canvas, original layer coordinates, alpha, masks, and layer effects; export groups as their child-layer composite.
 11. Export `preview.png` from the same approved composition or approved assembly job.
@@ -246,4 +256,7 @@ Completion criterion: required outputs exist, `png/` contains the reported expor
 - **Font missing:** record a substitute or raster fallback according to the human-approved choice.
 - **Assembly output is missing or empty:** fix the deterministic job and rerun; do not add an AI visual-review phase.
 - **A layer PNG name is invalid or duplicated:** rename the manifest/PSD layer semantically before assembly; never sanitize or suffix the exported filename silently.
+- **A layer or group violates its role prefix:** rename it in the manifest and regenerate the review package when the visible composition or reviewer-facing structure changes.
+- **A button is not an independent group or contains unrelated UI:** restructure the manifest before assembly; keep the body, decoration, icon, and text inside the button group.
+- **A sibling `z` is missing/duplicated or a background is above foreground:** correct the explicit `z` values and repeat review 2 if the visible stack changes.
 - **A layer PNG is missing or empty:** treat assembly as incomplete, fix the deterministic export, and rerun without adding AI visual review.

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import subprocess
 import sys
@@ -17,6 +18,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 TEMPLATE = ROOT / "photoshop_runner.jsx"
 SUPPORTED_KINDS = {"group", "shape", "text", "smart-object", "raster-object", "scene"}
+BUTTON_PREFIXES = ("Btn_", "Button_")
+IMAGE_PREFIXES = ("Img_", "Image_")
+BACKGROUND_PREFIXES = ("Bg_", "BG_")
+ICON_PREFIXES = ("Icon_",)
+PANEL_PREFIXES = ("Panel_", "Popup_")
+ASSET_PREFIXES = IMAGE_PREFIXES + BACKGROUND_PREFIXES + ICON_PREFIXES
 INVALID_FILENAME = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 WINDOWS_RESERVED_STEMS = {
     "CON", "PRN", "AUX", "NUL",
@@ -57,6 +64,109 @@ def validate_png_stem(value: str, layer_id: str) -> str:
     if len(value) > 240:
         raise BridgeError("E_INPUT", f"Layer name is too long for a reliable PNG filename for {layer_id}")
     return value
+
+
+def has_prefix(name: str, prefixes: tuple[str, ...]) -> bool:
+    return any(name.startswith(prefix) and len(name) > len(prefix) for prefix in prefixes)
+
+
+def validate_ui_name(layer: dict[str, Any]) -> None:
+    layer_id = layer["id"]
+    name = layer["name"]
+    kind = layer["kind"]
+    if name.startswith("@"):
+        if len(name) == 1:
+            raise BridgeError("E_INPUT", f"Text layer name requires a semantic suffix for {layer_id}")
+        is_raster_fallback = layer.get("text_fallback") is True and kind in {"smart-object", "raster-object"}
+        if kind != "text" and not is_raster_fallback:
+            raise BridgeError("E_INPUT", f"@ is reserved for text or an approved text_fallback layer: {name!r}")
+        return
+    if kind == "text":
+        raise BridgeError("E_INPUT", f"Text layer name must start with @ for {layer_id}: {name!r}")
+    if layer.get("text_fallback") is True:
+        raise BridgeError("E_INPUT", f"text_fallback layer name must start with @ for {layer_id}: {name!r}")
+    if has_prefix(name, BUTTON_PREFIXES):
+        if kind != "group":
+            raise BridgeError("E_INPUT", f"Btn_/Button_ is reserved for independent button groups: {name!r}")
+        return
+    if has_prefix(name, PANEL_PREFIXES):
+        if kind != "group":
+            raise BridgeError("E_INPUT", f"Panel_/Popup_ is reserved for groups: {name!r}")
+        return
+    if has_prefix(name, ASSET_PREFIXES):
+        if kind == "scene" and not has_prefix(name, BACKGROUND_PREFIXES):
+            raise BridgeError("E_INPUT", f"Scene layer name must start with Bg_ or BG_: {name!r}")
+        return
+    raise BridgeError(
+        "E_INPUT",
+        f"Non-reference layer name must use Btn_/Button_, Img_/Image_, Bg_/BG_, Icon_, @, Panel_, or Popup_: {name!r}",
+    )
+
+
+def validate_ui_structure(
+    layers: list[dict[str, Any]],
+    is_reference,
+) -> None:
+    children_by_parent: dict[str | None, list[dict[str, Any]]] = {}
+    for layer in layers:
+        parent = str(layer["parent"]) if layer.get("parent") else None
+        children_by_parent.setdefault(parent, []).append(layer)
+
+    non_reference_layers = [layer for layer in layers if not is_reference(layer["id"])]
+    for layer in non_reference_layers:
+        validate_ui_name(layer)
+        value = layer.get("z")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise BridgeError("E_INPUT", f"Non-reference layer requires an explicit finite numeric z: {layer['id']}")
+
+    for parent, siblings in children_by_parent.items():
+        active = [layer for layer in siblings if not is_reference(layer["id"])]
+        seen_z: dict[float, str] = {}
+        for layer in active:
+            z_value = float(layer["z"])
+            if z_value in seen_z:
+                scope = parent or "<root>"
+                raise BridgeError(
+                    "E_INPUT",
+                    f"Sibling z values must be unique in {scope}: {seen_z[z_value]} and {layer['id']} both use {layer['z']}",
+                )
+            seen_z[z_value] = layer["id"]
+        backgrounds = [layer for layer in active if has_prefix(layer["name"], BACKGROUND_PREFIXES)]
+        foreground = [layer for layer in active if layer not in backgrounds]
+        if backgrounds and foreground:
+            highest_background = max(float(layer["z"]) for layer in backgrounds)
+            lowest_foreground = min(float(layer["z"]) for layer in foreground)
+            if highest_background >= lowest_foreground:
+                scope = parent or "<root>"
+                raise BridgeError(
+                    "E_INPUT",
+                    f"Background layers must have lower z than foreground siblings in {scope}",
+                )
+
+    for group in non_reference_layers:
+        if group["kind"] != "group" or not has_prefix(group["name"], BUTTON_PREFIXES):
+            continue
+        if group.get("parent"):
+            raise BridgeError("E_INPUT", f"Button group must be top-level and outside other UI groups: {group['name']!r}")
+        children = [layer for layer in children_by_parent.get(group["id"], []) if not is_reference(layer["id"])]
+        if not children:
+            raise BridgeError("E_INPUT", f"Button group has no component layers: {group['name']!r}")
+        if any(layer["kind"] == "group" for layer in children):
+            raise BridgeError("E_INPUT", f"Button group must contain component layers directly, not nested groups: {group['name']!r}")
+        invalid = [
+            layer["name"] for layer in children
+            if not (layer["name"].startswith("@") or has_prefix(layer["name"], ASSET_PREFIXES))
+        ]
+        if invalid:
+            raise BridgeError("E_INPUT", f"Button group contains non-button content: {group['name']!r}: {invalid}")
+        backgrounds = [layer for layer in children if has_prefix(layer["name"], BACKGROUND_PREFIXES)]
+        if not backgrounds:
+            raise BridgeError("E_INPUT", f"Button group requires a Bg_/BG_ body layer: {group['name']!r}")
+        text_layers = [layer for layer in children if layer["name"].startswith("@")]
+        if text_layers:
+            non_text_layers = [layer for layer in children if not layer["name"].startswith("@")]
+            if non_text_layers and min(float(layer["z"]) for layer in text_layers) <= max(float(layer["z"]) for layer in non_text_layers):
+                raise BridgeError("E_INPUT", f"Button text must be above all non-text layers inside {group['name']!r}")
 
 
 def validate_job(payload: dict[str, Any], base: Path, overwrite: bool = False) -> dict[str, Any]:
@@ -149,6 +259,8 @@ def validate_job(payload: dict[str, Any], base: Path, overwrite: bool = False) -
         reference_cache[layer_id] = result
         trail.remove(layer_id)
         return result
+
+    validate_ui_structure(layers, is_reference)
 
     export_names: set[str] = set()
     layer_png_exports: list[dict[str, str]] = []
@@ -294,7 +406,7 @@ def probe_job(output_dir: Path) -> dict[str, Any]:
         draw.ellipse((3, 3, 44, 44), fill=(255, 210, 30, 255), outline=(30, 30, 30, 255), width=3)
         image.save(asset)
     return {
-        "document": {"width": 360, "height": 220, "resolution": 72, "depth": 8, "name": "codex-v3-probe"},
+        "document": {"width": 360, "height": 220, "resolution": 72, "depth": 8, "name": "codex-v3.4-probe"},
         "output": {
             "psd": str(output_dir / "photoshop-probe.psd"),
             "preview": str(output_dir / "photoshop-probe.png"),
@@ -302,7 +414,7 @@ def probe_job(output_dir: Path) -> dict[str, Any]:
             "layer_png_dir": str(output_dir / "png"),
             "report": str(output_dir / "photoshop-probe-report.json"),
         },
-        "scene_group_id": "ui",
+        "scene_group_id": "scene",
         "layers": [
             {"id": "reference", "name": "00_REFERENCE", "kind": "group", "z": 0, "visible": False, "reference": True},
             {
@@ -310,23 +422,27 @@ def probe_job(output_dir: Path) -> dict[str, Any]:
                 "parent": "reference", "z": 0, "visible": False, "source_asset": str(asset),
                 "bounds": [0, 0, 48, 48],
             },
-            {"id": "ui", "name": "20_UI", "kind": "group", "z": 10},
-            {"id": "content", "name": "content", "kind": "group", "parent": "ui", "z": 15},
+            {"id": "scene", "name": "Bg_ProbeScene", "kind": "group", "z": 0},
             {
-            "id": "probe_shape", "name": "probe_shape", "kind": "shape", "shape": "rounded-rectangle",
-                "parent": "content", "z": 20, "bounds": [38, 42, 322, 178], "radius": 28, "fill": "#3F77D8",
+                "id": "probe_canvas", "name": "Bg_ProbeCanvas", "kind": "shape", "shape": "rounded-rectangle",
+                "parent": "scene", "z": 0, "bounds": [0, 0, 360, 220], "radius": 0, "fill": "#F3F4F6",
+            },
+            {"id": "content", "name": "Btn_Probe", "kind": "group", "z": 10},
+            {
+            "id": "probe_shape", "name": "Bg_ProbeButton", "kind": "shape", "shape": "rounded-rectangle",
+                "parent": "content", "z": 0, "bounds": [38, 42, 322, 178], "radius": 28, "fill": "#3F77D8",
                 "effects": {
                     "stroke": {"size": 4, "color": "#14213D", "opacity": 100, "position": "inside"},
                     "drop_shadow": {"distance": 5, "size": 7, "spread": 8, "angle": 90, "opacity": 42, "color": "#000000"},
                 },
             },
             {
-                "id": "probe_text", "name": "probe_text", "kind": "text", "parent": "content", "z": 30,
-                "bounds": [74, 88, 250, 126], "baseline_y": 124, "text": "Codex v3", "font": "Arial-BoldMT",
+                "id": "probe_text", "name": "@ProbeText", "kind": "text", "parent": "content", "z": 20,
+                "bounds": [74, 88, 250, 126], "baseline_y": 124, "text": "Codex v3.4", "font": "Arial-BoldMT",
                 "size_px": 34, "tracking": 0, "fill": "#FFFFFF",
             },
             {
-                "id": "probe_object", "name": "probe_object", "kind": "smart-object", "parent": "content", "z": 40,
+                "id": "probe_object", "name": "Icon_Probe", "kind": "smart-object", "parent": "content", "z": 10,
                 "source_asset": str(asset), "bounds": [272, 86, 320, 134],
             },
         ],

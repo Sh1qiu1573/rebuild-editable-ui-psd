@@ -34,9 +34,9 @@ def shape_job(root: Path, name: str, radius: int) -> dict:
             "report": str(root / f"{name}-report.json"),
         },
         "layers": [
-            {"id": "ui", "name": "20_UI", "kind": "group", "z": 10},
+            {"id": "ui", "name": "Panel_Test", "kind": "group", "z": 10},
             {
-                "id": "test_shape", "name": "test_shape", "kind": "shape", "parent": "ui", "z": 20,
+                "id": "test_shape", "name": "Bg_TestShape", "kind": "shape", "parent": "ui", "z": 0,
                 "shape": "rounded-rectangle", "bounds": [30, 30, 210, 130], "radius": radius, "fill": "#467BD8",
                 "effects": {"stroke": {"size": 3, "color": "#17233F", "position": "inside", "opacity": 100}},
             },
@@ -54,14 +54,14 @@ def text_job(root: Path, name: str, font: str) -> dict:
             "report": str(root / f"{name}-report.json"),
         },
         "layers": [
-            {"id": "ui", "name": "20_UI", "kind": "group", "z": 10},
+            {"id": "ui", "name": "Panel_TextTest", "kind": "group", "z": 10},
             {
-                "id": "background", "name": "background", "kind": "shape", "parent": "ui", "z": 11,
+                "id": "background", "name": "Bg_TextCanvas", "kind": "shape", "parent": "ui", "z": 0,
                 "shape": "rounded-rectangle", "bounds": [0, 0, 300, 120], "radius": 0, "fill": "#243B63",
             },
             {
-                "id": "test_text", "name": "test_text", "kind": "text", "parent": "ui", "z": 20,
-                "bounds": [45, 32, 255, 84], "baseline_y": 82, "text": "Codex v3", "font": font,
+                "id": "test_text", "name": "@TestText", "kind": "text", "parent": "ui", "z": 20,
+                "bounds": [45, 32, 255, 84], "baseline_y": 82, "text": "Codex v3.4", "font": font,
                 "size_px": 42, "tracking": 0, "fill": "#FFFFFF",
                 "effects": {"stroke": {"size": 1, "color": "#111827", "position": "outside", "opacity": 100}},
             },
@@ -78,13 +78,13 @@ def assert_probe(work: Path, timeout: float) -> None:
     if not report.get("preexisting_documents", {}).get("preserved"):
         raise RuntimeError(f"Probe did not preserve pre-existing Photoshop documents: {report.get('preexisting_documents')}")
     structure = inspect(Path(report["psd"]))
-    expected = {"Group": 3, "ShapeLayer": 1, "TypeLayer": 1, "SmartObjectLayer": 2}
+    expected = {"Group": 3, "ShapeLayer": 2, "TypeLayer": 1, "SmartObjectLayer": 2}
     for kind, count in expected.items():
         if structure["counts"].get(kind) != count:
             raise RuntimeError(f"Probe expected {count} {kind}, got {structure['counts']}")
     if structure["counts"].get("PixelLayer", 0):
         raise RuntimeError("Probe retained an undocumented bootstrap pixel layer")
-    shape = next(layer for layer in structure["layers"] if layer["name"] == "probe_shape")
+    shape = next(layer for layer in structure["layers"] if layer["name"] == "Bg_ProbeButton")
     if not {"Stroke", "DropShadow"}.issubset(set(shape["effects"])):
         raise RuntimeError(f"Probe shape effects were not preserved: {shape['effects']}")
     preview = Image.open(report["preview"]).convert("RGB")
@@ -101,7 +101,7 @@ def assert_probe(work: Path, timeout: float) -> None:
         raise RuntimeError("Nested smart object is hidden by incorrect sibling-group stacking")
     exported = report.get("layer_pngs", [])
     exported_names = {item["name"] for item in exported}
-    expected_names = {"20_UI", "content", "probe_shape", "probe_text", "probe_object"}
+    expected_names = {"Bg_ProbeScene", "Bg_ProbeCanvas", "Btn_Probe", "Bg_ProbeButton", "@ProbeText", "Icon_Probe"}
     if exported_names != expected_names:
         raise RuntimeError(f"Layer PNG export set is wrong: {exported_names}")
     if {"00_REFERENCE", "source_reference"} & exported_names:

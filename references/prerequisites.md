@@ -37,7 +37,7 @@ Install only dependencies required by the selected route.
 
 ## Native PSD backend
 
-V3.3 requires Codex Desktop on Windows and Adobe Photoshop registered as `Photoshop.Application`.
+V3.4 requires Codex Desktop on Windows and Adobe Photoshop registered as `Photoshop.Application`.
 
 1. Run `scripts/photoshop_bridge.py probe <work>/photoshop-probe --timeout 45`.
 2. Confirm native group, text, shape, embedded smart-object, and transparent per-layer PNG export support.
@@ -51,7 +51,7 @@ The bridge probe is an environment test, not the deleted final reopen-and-verify
 
 Generate a complete UI-free scene and use it whole. Do not use masked-inpaint patches, restore source pixels, or composite multiple candidates.
 
-Whole-scene drift is accepted by selecting v3.3 unless the user explicitly requires source-scene preservation. When preservation is required, stop and use a different workflow.
+Whole-scene drift is accepted by selecting v3.4 unless the user explicitly requires source-scene preservation. When preservation is required, stop and use a different workflow.
 
 ## Component generation route
 

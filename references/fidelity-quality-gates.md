@@ -1,13 +1,15 @@
-# V3.3 representation and human quality gates
+# V3.4 representation and human quality gates
 
 ## 1. Acceptance authority
 
-V3.3 uses two blocking human-review gates:
+V3.4 uses two blocking human-review gates:
 
 1. Human approval of classification, instances, masks, text units, and z-order.
 2. Human approval of one full-size composite containing the exact scene and components intended for the PSD.
 
 The second approval is the final visual authority. After it passes, do not run AI visual inspection, component regression, scene-only AI review, difference adjudication, or a reopen-and-verify phase.
+
+Both reviews also enforce `psd-layer-structure.md`: prefix-compliant names, one independent group per button, button content containment, and background-before-foreground stack order.
 
 ## 2. Representation policy
 
@@ -64,7 +66,7 @@ Block production asset generation until a human has corrected and approved:
 
 ## 8. Human review 2 gate
 
-Create `review-composite.png` at source dimensions and optionally `object-contact-sheet.png`. The reviewer checks completeness, silhouette quality, redraw fidelity, typography, button construction, position, rotation, effects, and z-order.
+Create `review-composite.png` at source dimensions and optionally `object-contact-sheet.png`. The reviewer checks completeness, silhouette quality, redraw fidelity, typography, independent button construction, position, rotation, effects, and bottom-to-top z-order.
 
 Freeze asset and manifest hashes on approval. Any later visual change invalidates approval and returns the task to review 2.
 

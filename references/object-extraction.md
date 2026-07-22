@@ -6,6 +6,8 @@ Create one raster layer per semantic object instance. If an editor could reasona
 
 Repeated objects receive separate IDs, masks, assets, and layers. Detached stars, sparkles, hearts, bubbles, icons, badges, and decorations are separate objects even when stylistically similar.
 
+Name final object layers by role: `Icon_` for icons and currency/heart-style symbols, `Img_`/`Image_` for ordinary artwork or decoration, and `Bg_`/`BG_` for backgrounds or body artwork. When an object belongs to a button, keep it inside that independent `Btn_`/`Button_` group.
+
 ## 2. Human-approved classification
 
 Do not extract production assets from the draft inventory. Human review 1 must first approve:

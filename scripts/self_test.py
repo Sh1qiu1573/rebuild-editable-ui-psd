@@ -54,18 +54,19 @@ def main() -> int:
                     "id": "source_reference", "name": "source_reference", "kind": "smart-object",
                     "parent": "reference", "source_asset": str(source_path),
                 },
-                {"id": "ui", "name": "20_UI", "kind": "group"},
+                {"id": "ui", "name": "Panel_UI", "kind": "group", "z": 100},
+                {"id": "button", "name": "Btn_Primary", "kind": "group", "z": 200},
                 {
-                    "id": "button", "name": "button_primary", "kind": "shape", "parent": "ui",
+                    "id": "button_body", "name": "Bg_Primary", "kind": "shape", "parent": "button", "z": 0,
                     "bounds": [20, 20, 180, 80],
                 },
             ],
         }
         validated_export_job = validate_job(export_job, work)
-        if [item["name"] for item in validated_export_job["layer_png_exports"]] != ["20_UI", "button_primary"]:
+        if [item["name"] for item in validated_export_job["layer_png_exports"]] != ["Panel_UI", "Btn_Primary", "Bg_Primary"]:
             raise RuntimeError("Reference branch exclusion failed in the layer PNG export contract")
         invalid_job = json.loads(json.dumps(export_job))
-        invalid_job["layers"][3]["name"] = "bad/name"
+        invalid_job["layers"][4]["name"] = "bad/name"
         try:
             validate_job(invalid_job, work)
         except BridgeError as error:
@@ -73,6 +74,49 @@ def main() -> int:
                 raise
         else:
             raise RuntimeError("Invalid Windows layer PNG filename was accepted")
+        invalid_text_job = json.loads(json.dumps(export_job))
+        invalid_text_job["layers"].append({
+            "id": "button_text", "name": "StartText", "kind": "text", "parent": "button", "z": 20,
+            "bounds": [40, 30, 160, 65], "text": "Start",
+        })
+        try:
+            validate_job(invalid_text_job, work)
+        except BridgeError as error:
+            if "must start with @" not in str(error):
+                raise
+        else:
+            raise RuntimeError("Unprefixed text layer was accepted")
+        invalid_order_job = json.loads(json.dumps(export_job))
+        invalid_order_job["layers"].append({
+            "id": "button_text", "name": "@StartText", "kind": "text", "parent": "button", "z": -1,
+            "bounds": [40, 30, 160, 65], "text": "Start",
+        })
+        try:
+            validate_job(invalid_order_job, work)
+        except BridgeError as error:
+            if "Background layers must have lower z" not in str(error):
+                raise
+        else:
+            raise RuntimeError("Button background was accepted above foreground text")
+        missing_body_job = json.loads(json.dumps(export_job))
+        missing_body_job["layers"][4]["name"] = "Icon_Primary"
+        try:
+            validate_job(missing_body_job, work)
+        except BridgeError as error:
+            if "requires a Bg_/BG_ body" not in str(error):
+                raise
+        else:
+            raise RuntimeError("Button group without a background body was accepted")
+        nested_button_job = json.loads(json.dumps(export_job))
+        nested_button_job["layers"][3]["parent"] = "ui"
+        nested_button_job["layers"][3]["z"] = 10
+        try:
+            validate_job(nested_button_job, work)
+        except BridgeError as error:
+            if "must be top-level" not in str(error):
+                raise
+        else:
+            raise RuntimeError("Nested button group was accepted")
         for label, angle in (("horizontal", 0), ("diamond", 45), ("vertical", 90)):
             mask_path = work / f"{label}.png"
             rounded_mask(source.size, angle).save(mask_path)
@@ -154,7 +198,7 @@ def main() -> int:
                 "--stroke-min", "1", "--stroke-max", "3",
             ])
 
-    print(json.dumps({"passed": True, "tests": ["layer-png-export-contract", "rotated-shape-fit", "custom-shape-rejection", "alpha-recall", "visual-gate", "clean-scene-masked-pass", "clean-scene-full-redraw-rejection", "clean-scene-approved-full-route", "clean-scene-size-rejection", "text-search"]}, ensure_ascii=False))
+    print(json.dumps({"passed": True, "tests": ["layer-png-export-contract", "ui-prefix-validation", "button-group-validation", "top-level-button-validation", "background-z-validation", "rotated-shape-fit", "custom-shape-rejection", "alpha-recall", "visual-gate", "clean-scene-masked-pass", "clean-scene-full-redraw-rejection", "clean-scene-approved-full-route", "clean-scene-size-rejection", "text-search"]}, ensure_ascii=False))
     return 0
 
 

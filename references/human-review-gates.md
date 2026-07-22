@@ -1,6 +1,6 @@
 # Human review gates
 
-Human review is blocking in v3.3. Record both review rounds in `human-review.json`. Do not infer approval from silence, a previous task, or an AI assessment.
+Human review is blocking in v3.4. Record both review rounds in `human-review.json`. Do not infer approval from silence, a previous task, or an AI assessment.
 
 ## Review 1: classification and masks
 
@@ -17,7 +17,7 @@ Ask the reviewer to correct:
 - Objects that need splitting or merging.
 - Over-masking, under-masking, missing holes, clipped thin parts, or neighboring pixels.
 - Wrong text transcription or text-unit grouping.
-- Wrong bounds, names, groups, and z-order.
+- Wrong bounds, required naming prefixes, independent button groups, parent groups, or back-to-front z-order.
 
 After corrections, issue a new review revision. Approval must name the approved revision and set `classification_and_masks.status` to `approved`.
 
@@ -33,7 +33,7 @@ The composite must contain the exact scene, objects, text, shapes, transforms, e
 
 Ask the reviewer to check:
 
-- Completeness, identity, wording, scale, position, rotation, opacity, and z-order.
+- Completeness, identity, wording, scale, position, rotation, opacity, and z-order, including backgrounds below foreground interaction elements.
 - Scene UI residue and unwanted generated content.
 - Over/under-masking, halos, hard rectangles, missing holes, and clipped effects.
 - Whole-component redraw fidelity and consistency.

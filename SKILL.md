@@ -1,9 +1,9 @@
 ---
 name: rebuild-editable-ui-psd
-description: Rebuild a flattened app or game UI screenshot into a hybrid editable Photoshop PSD on Windows using whole-scene regeneration, whole-component redraw for occluded raster artwork, two blocking human-review gates, semantic one-object-per-layer extraction, measured text and shape reconstruction, deterministic Photoshop assembly, and transparent PNG export for every non-reference PSD layer. Use when the user asks to split, reverse-engineer, reconstruct, or convert a PNG/JPG interface screenshot into an editable layered PSD and accepts a regenerated scene plus human approval instead of post-assembly AI verification.
+description: Rebuild a flattened app or game UI screenshot into a hybrid editable Photoshop PSD on Windows using whole-scene regeneration, whole-component redraw for occluded raster artwork, two blocking human-review gates, semantic one-object-per-layer extraction, measured text and shape reconstruction, Unity-oriented PSD naming/grouping/z-order rules, deterministic Photoshop assembly, and transparent PNG export for every non-reference PSD layer. Use when the user asks to split, reverse-engineer, reconstruct, or convert a PNG/JPG interface screenshot into an editable layered PSD and accepts a regenerated scene plus human approval instead of post-assembly AI verification.
 ---
 
-# Rebuild Editable UI PSD v3.3
+# Rebuild Editable UI PSD v3.4
 
 Build a hybrid PSD. Use one regenerated full-canvas scene smart object; rebuild ordinary UI as native text, shape, and grouped layers; retain irregular artwork as separate raster layers or smart objects.
 
@@ -11,7 +11,7 @@ This is a controlled reconstruction from visible pixels, not recovery of the ori
 
 Read `skill-metadata.json` first. Copy its version and update timestamp into `task-audit.json` and the handoff report.
 
-This is the Codex Desktop + Windows Photoshop v3.3 branch. Use `references/codex-photoshop-v3.md` and the bundled automation scripts for assembly and layer export.
+This is the Codex Desktop + Windows Photoshop v3.4 branch. Use `references/codex-photoshop-v3.md` and the bundled automation scripts for assembly and layer export.
 
 ## Load the operating references
 
@@ -26,6 +26,7 @@ Before acting, read:
 - `references/text-reconstruction.md` before creating live text.
 - `references/overlap-analysis.md` when overlaps require front/back analysis.
 - `references/fidelity-quality-gates.md` before choosing native, vector, or raster representation.
+- `references/psd-layer-structure.md` before naming layers, assigning groups, setting `z`, or writing the final Photoshop job.
 - `references/codex-photoshop-v3.md` before Photoshop assembly.
 
 ## Establish the contract
@@ -40,7 +41,7 @@ Collect or infer:
 
 Default to the hybrid scope. Keep the main subject, environment, fixed props, and integrated lighting inside `scene`. Extract independently selectable overlays such as bubbles, hearts, sparkles, icons, buttons, badges, and detached title decorations.
 
-The source screenshot remains the authority for component identity, text, layout, and z-order. The scene appearance may drift because v3.3 defaults to whole-scene regeneration and direct replacement. Do not request separate scene-drift approval unless the user has explicitly required source-scene preservation.
+The source screenshot remains the authority for component identity, text, layout, and z-order. The scene appearance may drift because v3.4 defaults to whole-scene regeneration and direct replacement. Do not request separate scene-drift approval unless the user has explicitly required source-scene preservation.
 
 Completion criterion: every visible item belongs to exactly one class: `scene`, `editable-text`, `editable-shape`, or `raster-object`; every non-scene item has one stable semantic object ID.
 
@@ -49,11 +50,11 @@ Completion criterion: every visible item belongs to exactly one class: `scene`, 
 1. **Preflight.** Run `scripts/check_environment.py`, then `scripts/photoshop_bridge.py probe <work>/photoshop-probe --timeout 45`. Confirm permission before sending local artwork to a network service. Block native assembly when the Photoshop bridge fails.
 2. **Inventory.** Measure the source, transcribe text, identify semantic object instances, classify every item, create draft visible masks, and record uncertain boundaries and overlaps.
 3. **Human review 1: classification and masks.** Produce the classification overlay, object list, and draft masks. Pause for a human to correct missing items, extra items, over-masking, under-masking, merged/split instances, wrong classes, names, and z-order. Do not generate final scene or component assets until approval is recorded.
-4. **Plan layers.** Create `layer-manifest.json` from the approved inventory. Run `scripts/audit_object_manifest.py` and resolve structural violations.
+4. **Plan layers.** Create `layer-manifest.json` from the approved inventory. Apply `references/psd-layer-structure.md`: assign every non-reference layer or group a required semantic prefix, place each button in its own `Btn_`/`Button_` group, and assign explicit sibling-scoped `z` values from back to front. Run `scripts/audit_object_manifest.py` and resolve structural violations.
 5. **Regenerate the scene.** Generate a complete clean scene without UI at the target dimensions. Use the accepted candidate as the entire scene; do not splice source pixels, local patches, or masked inpaint results into it.
 6. **Rebuild components.** Extract complete visible objects normally. When any raster object has missing, damaged, or occluded pixels, redraw the entire component in one image-generation job, then segment/matte the redrawn result again. Do not combine its original visible fragment with generated pixels. Rebuild text and regular geometry as editable Photoshop layers where practical; reconstruct complete overlapped shapes before stacking.
 7. **Human review 2: assembled review composite.** Assemble the regenerated scene and every rebuilt/extracted component at final coordinates into one source-size `review-composite.png`. Also provide an object contact sheet when individual alpha edges are hard to inspect. Pause for human corrections. Approval is the final visual gate; after approval, do not run AI visual review, isolated component regression, scene-only comparison, or reopened-PSD verification.
-8. **Assemble, export layers, and hand off.** Build the PSD from the approved manifest and approved assets through the Photoshop bridge. Mark the hidden reference branch with `reference: true`, set `output.layer_png_dir` to `png`, and save `final.psd` under a new name. From the completed PSD, export every non-reference layer and layer group as a full-canvas transparent PNG named exactly `<layer name>.png` into `png/`. Export `preview.png` from the same approved composition and deliver the complete package. Perform only mechanical output checks needed to confirm that the PSD, preview, report, and expected layer PNGs were written; do not add a post-assembly AI review phase.
+8. **Assemble, export layers, and hand off.** Build the PSD from the approved manifest and approved assets through the Photoshop bridge. Treat naming, button containment, explicit unique sibling `z`, and background-before-foreground validation as blocking. Mark the hidden reference branch with `reference: true`, set `output.layer_png_dir` to `png`, and save `final.psd` under a new name. From the completed PSD, export every non-reference layer and layer group as a full-canvas transparent PNG named exactly `<layer name>.png` into `png/`. Export `preview.png` from the same approved composition and deliver the complete package. Perform only mechanical output checks needed to confirm that the PSD, preview, report, and expected layer PNGs were written; do not add a post-assembly AI review phase.
 
 Do not move past either human-review gate until approval and requested corrections are recorded.
 
@@ -82,6 +83,9 @@ Human approval of `review-composite.png` determines visual acceptance. Do not su
 - Classify and mask first, then require human corrections for over-masking, under-masking, missed objects, extra objects, merged/split objects, and wrong classes.
 - Build every overlapped shape or component as a complete object and use verified z-order for overlap.
 - Keep distant text clusters in separate TypeLayers.
+- Name every non-reference text layer with `@`; use `Btn_`/`Button_`, `Img_`/`Image_`, `Bg_`/`BG_`, `Icon_`, and `Panel_`/`Popup_` exactly as defined in `references/psd-layer-structure.md`. The hidden reference branch is the only naming exception.
+- Put each button in one independent top-level `Btn_` or `Button_` group outside `Panel_`/`Popup_` groups. Keep its `Bg_`/`BG_` body, `Img_`/`Image_` decoration, `Icon_` artwork, and `@` text inside that group; never mix unrelated UI into it.
+- Require an explicit, unique numeric `z` for every pair of siblings. Lower `z` is farther back and must appear lower in the Photoshop Layers panel; backgrounds must have lower `z` than foreground panels, buttons, icons, images, and text in the same scope.
 - Mark `00_REFERENCE` with `reference: true`; all descendants inherit exclusion from per-layer PNG export. Do not exclude any other layer.
 - Before assembly, make every non-reference PSD layer name a unique case-insensitive Windows-safe filename stem. Do not silently sanitize, suffix, or overwrite layer PNG filenames.
 - Record font substitutions and generated/redrawn components in `limitations.md`.

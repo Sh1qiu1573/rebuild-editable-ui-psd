@@ -42,7 +42,7 @@ If the total mask cannot be separated reliably, set outline status to `unknown` 
 
 ## Photoshop reconstruction
 
-1. Create one live TypeLayer per spatial text unit.
+1. Create one live TypeLayer per spatial text unit and name it with `@`, such as `@TitleText` or `@GoldText`.
 2. Exhaustively render and rank candidate font files/weights, sizes, tracking, and stroke widths. Increase the search range until a candidate passes or all credible fonts are exhausted.
 3. Match font size, tracking, leading, alignment, rotation, and fill.
 4. When an outline exists, add a native text Stroke effect with measured width and color. Record inside/center/outside placement and opacity when recoverable.
@@ -50,4 +50,4 @@ If the total mask cannot be separated reliably, set outline status to `unknown` 
 6. Render the intended text representation before review 2 and include it at final coordinates in `review-composite.png`.
 7. Apply position corrections before requesting review 2 approval.
 
-If no credible live TypeLayer is available, use a human-approved source-raster smart object or substitution and keep an optional hidden live transcription marked `non-rendering-edit-helper`. Completion criterion: wording is exact, distant clusters are separate, measured style information is recorded, and human review 2 approves the appearance and placement. After approval, do not run AI visual regression or a reopened-PSD verification phase.
+If no credible live TypeLayer is available, use a human-approved source-raster smart object or substitution, keep the `@` name, set `text_fallback: true` in the Photoshop job, and keep an optional hidden live transcription marked `non-rendering-edit-helper`. Completion criterion: wording is exact, distant clusters are separate, measured style information is recorded, and human review 2 approves the appearance and placement. After approval, do not run AI visual regression or a reopened-PSD verification phase.

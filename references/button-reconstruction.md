@@ -100,17 +100,19 @@ Use `shape_model.recommended_reconstruction` before choosing a body layer:
 - `custom-vector-path`: trace the actual contour, including notches and unequal/hand-drawn corners; do not replace curves with diagonal chamfers.
 - `source-raster-smart-object`: preserve textured/distressed outlines and inseparable effects when vector output cannot pass the isolated comparison.
 
-Use this layer structure when the corresponding effects exist:
+Create one independent group per button and use this layer structure when the corresponding parts exist:
 
 ```text
-button_<id> [group]
-  clipped_highlight_or_texture [optional raster/smart object]
-  label [live text, separate unit]
-  icon [separate object]
-  button_body [native rounded-rectangle shape]
+Btn_<SemanticName> [group]
+  @<SemanticName>Text [live text, separate unit]
+  Icon_<SemanticName> [optional separate icon]
+  Img_<SemanticName>Decoration [optional clipped raster/smart object]
+  Bg_<SemanticName> [native shape, vector path, or smart-object body]
 ```
 
-Apply native layer effects to `button_body` or the custom path when they reproduce the source:
+The tree is shown in Photoshop panel order. Assign `Bg_` the lowest sibling `z`, decorations/icons above it, and `@` text the highest `z` when present. Keep every button group independent at the top level, outside panels and popups; do not place unrelated UI inside it. Use `Button_` instead of `Btn_` only when that convention is more appropriate for the project, but never mix unprefixed button groups into the PSD.
+
+Apply native layer effects to the `Bg_` button body or the custom path when they reproduce the source:
 
 - Outer stroke as Stroke.
 - Inner glow as Inner Glow.
@@ -123,7 +125,7 @@ Use a clipped smart object for a real texture/pattern. Preserve its measured sca
 
 If a native Photoshop effect cannot reproduce the source, use a separate documented effect layer while keeping the body editable.
 
-Completion criterion: label and icon are separate; all detected effects are represented by native effects or documented effect layers; the chosen body representation is included in the assembled human-review composite. Visual fidelity takes priority over forcing the body to remain native.
+Completion criterion: the independent button group contains its `Bg_`/`BG_` body and any `Img_`/`Image_` decoration, `Icon_` artwork, and `@` label; all detected effects are represented by native effects or documented effect layers; the chosen body representation is included in the assembled human-review composite. Visual fidelity takes priority over forcing the body to remain native.
 
 ## 6. Prepare each parameter for human review
 
