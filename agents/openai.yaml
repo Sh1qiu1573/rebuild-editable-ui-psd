@@ -1,0 +1,4 @@
+interface:
+  display_name: "Editable UI PSD v3.3"
+  short_description: "Rebuild layered PSDs and export transparent PNGs"
+  default_prompt: "Use $rebuild-editable-ui-psd to rebuild this flattened UI as an editable PSD and export every non-reference layer as a transparent PNG."
