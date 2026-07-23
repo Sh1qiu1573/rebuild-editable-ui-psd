@@ -1,0 +1,4 @@
+interface:
+  display_name: "Editable UI PSD v3.5"
+  short_description: "Rebuild Unity-ready layered PSDs from UI screenshots"
+  default_prompt: "Use $rebuild-editable-ui-psd to rebuild this flattened UI as a Unity-ready editable PSD with strict layer names, button groups, z-order, and transparent layer PNG exports."
