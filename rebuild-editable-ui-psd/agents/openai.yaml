@@ -1,0 +1,7 @@
+interface:
+  display_name: "Editable UI PSD v3.6"
+  short_description: "Split UI screenshots into editable layered PSDs"
+  default_prompt: "Use $rebuild-editable-ui-psd to 把图片拆解为PSD with built-in GPT Image 2, bundled rembg, editable ordinary text, raster title artwork, and transparent layer exports."
+
+policy:
+  allow_implicit_invocation: true

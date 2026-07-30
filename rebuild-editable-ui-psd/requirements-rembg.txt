@@ -1,0 +1,2 @@
+# Upstream: https://github.com/danielgatis/rembg
+rembg[cpu,cli]==2.0.77
