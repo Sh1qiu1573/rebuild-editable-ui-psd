@@ -1,0 +1,7 @@
+interface:
+  display_name: "Editable UI PSD v3.6.2"
+  short_description: "Split UI screenshots into editable layered PSDs"
+  default_prompt: "Use $rebuild-editable-ui-psd to 把图片拆解为PSD, invoke $imagegen in its default built-in mode for generated assets, use GPU-first rembg with CPU fallback, and export editable layers."
+
+policy:
+  allow_implicit_invocation: true

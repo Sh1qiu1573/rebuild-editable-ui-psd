@@ -1,0 +1,4 @@
+# Upstream: https://github.com/danielgatis/rembg
+rembg[gpu,cli]==2.0.77
+# Install the matching NVIDIA CUDA 13 and cuDNN runtime DLLs inside the isolated venv.
+onnxruntime-gpu[cuda,cudnn]==1.28.0
